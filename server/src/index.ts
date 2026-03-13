@@ -2,6 +2,7 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { DISCONNECT_TIMEOUT_MS } from '@tabletop-arena/shared';
 
@@ -45,12 +46,17 @@ app.get('/health', (_req, res) => {
 
 // ─── Serve Client in Production ───────────────────────────
 
-if (process.env.NODE_ENV === 'production') {
-  const clientDist = path.resolve(__dirname, '../../client/dist');
+// Always serve client build if the dist directory exists
+const clientDist = path.resolve(__dirname, '../../client/dist');
+if (fs.existsSync(clientDist)) {
+  console.log(`[server:static] Serving client from ${clientDist}`);
   app.use(express.static(clientDist));
+  // SPA fallback — serve index.html for any non-API, non-socket route
   app.get('*', (_req, res) => {
     res.sendFile(path.join(clientDist, 'index.html'));
   });
+} else {
+  console.log(`[server:static] Client dist not found at ${clientDist}`);
 }
 
 // ─── Helpers ──────────────────────────────────────────────
